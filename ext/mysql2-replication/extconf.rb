@@ -59,4 +59,7 @@ unless PKGConfig.have_package("libmariadb")
   end
 end
 
+# 2.7+
+have_func('rb_gc_mark_movable')
+
 create_makefile("mysql2_replication")

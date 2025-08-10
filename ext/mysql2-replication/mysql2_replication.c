@@ -10,6 +10,14 @@
 #include <mariadb_com.h>
 #include <mariadb_rpl.h>
 
+// ruby 2.7+
+#ifdef HAVE_RB_GC_MARK_MOVABLE
+#define rb_mysql2_replication_gc_location(ptr) ptr = rb_gc_location(ptr)
+#else
+#define rb_gc_mark_movable(ptr) rb_gc_mark(ptr)
+#define rb_mysql2_replication_gc_location(ptr)
+#endif
+
 // ruby 2.2+
 #ifdef TypedData_Make_Struct
 #define NEW_TYPEDDATA_WRAPPER 1
@@ -801,8 +809,10 @@ static void
 rbm2_replication_client_mark(void *data)
 {
   rbm2_replication_client_wrapper *wrapper = data;
-  rb_gc_mark(wrapper->rb_client);
-  rb_gc_mark(wrapper->rb_table_maps);
+  if (wrapper) {
+    rb_gc_mark_movable(wrapper->rb_client);
+    rb_gc_mark_movable(wrapper->rb_table_maps);
+  }
 }
 
 static void
@@ -818,15 +828,34 @@ rbm2_replication_client_free(void *data)
   ruby_xfree(wrapper);
 }
 
+static size_t rbm2_replication_client_memsize(const void * wrapper) {
+  const rbm2_replication_client_wrapper * w = wrapper;
+  return sizeof(*w);
+}
+
+static void rbm2_replication_client_compact(void * wrapper) {
+  rbm2_replication_client_wrapper * w = wrapper;
+  if (w) {
+    rb_mysql2_replication_gc_location(w->rb_client);
+    rb_mysql2_replication_gc_location(w->rb_table_maps);
+  }
+}
+
 static const rb_data_type_t rbm2_replication_client_type = {
   "Mysql2Replication::Client",
   {
     rbm2_replication_client_mark,
     rbm2_replication_client_free,
+    rbm2_replication_client_memsize,
+#ifdef HAVE_RB_GC_MARK_MOVABLE
+    rbm2_replication_client_compact,
+#endif
   },
   NULL,
   NULL,
+#ifdef RUBY_TYPED_FREE_IMMEDIATELY
   RUBY_TYPED_FREE_IMMEDIATELY,
+#endif
 };
 
 static VALUE
