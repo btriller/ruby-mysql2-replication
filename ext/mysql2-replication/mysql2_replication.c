@@ -1572,9 +1572,11 @@ rbm2_replication_client_fetch(VALUE self)
       }
     }
     if (!event) {
+      /*
       if (wrapper->rpl->buffer_size == 0) {
         return RUBY_Qnil;
       }
+      */
       continue;
     }
     return rbm2_replication_event_new(wrapper, event);
@@ -1602,9 +1604,11 @@ rbm2_replication_client_each(VALUE self)
       }
     }
     if (!event) {
+      /*
       if (wrapper->rpl->buffer_size == 0) {
         return RUBY_Qnil;
       }
+      */
       continue;
     }
     rb_yield(rbm2_replication_event_new(wrapper, event));
