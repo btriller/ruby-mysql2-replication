@@ -1524,6 +1524,11 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
                   rbm2_replication_rows_event_parse_rows_rescue, (VALUE)&data);
       }
       rb_iv_set(rb_event, "@rows", rb_rows);
+      VALUE rb_extra_data = rb_ary_new_capa(e->extra_data_size - 2);
+      for (i = 0; i < e->extra_data_size - 2; i++) {
+        rb_ary_push(rb_extra_data, UINT2NUM(((uint8_t *)e->extra_data)[i]));
+      }
+      rb_iv_set(rb_event, "@extra_data", rb_extra_data);
       if (klass == rb_cMysql2ReplicationUpdateRowsEvent) {
         rb_iv_set(rb_event, "@updated_rows", rb_updated_rows);
       }
@@ -1658,6 +1663,7 @@ Init_mysql2_replication(void)
   rb_define_attr(rb_cMysql2ReplicationRowsEvent, "table_map", true, false);
   rb_define_attr(rb_cMysql2ReplicationRowsEvent, "rows_flags", true, false);
   rb_define_attr(rb_cMysql2ReplicationRowsEvent, "rows", true, false);
+  rb_define_attr(rb_cMysql2ReplicationRowsEvent, "extra_data", true, false);
   rb_define_method(rb_cMysql2ReplicationRowsEvent,
                    "statement_end?",
                    rbm2_replication_rows_event_statement_end_p,
