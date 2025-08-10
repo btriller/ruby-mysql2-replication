@@ -1223,12 +1223,15 @@ rbm2_replication_rows_event_parse_rows_body(VALUE user_data)
                                   column_bitmap,
                                   rb_columns);
     rb_ary_push(data->rb_rows, rb_row);
-    if (data->rb_klass == rb_cMysql2ReplicationUpdateRowsEvent) {
-      VALUE rb_updated_row = rbm2_row_parse(&row_data,
-                                            data->rows_event->column_count,
-                                            column_update_bitmap,
-                                            rb_columns);
-      rb_ary_push(data->rb_updated_rows, rb_updated_row);
+    if (data->rows_event->type == UPDATE_ROWS) {
+      if (data->rows_event->column_update_bitmap) {
+        VALUE rb_updated_row;
+        rb_updated_row = rbm2_row_parse(&row_data,
+            data->rows_event->column_count,
+            column_update_bitmap,
+            rb_columns);
+        rb_ary_push(data->rb_updated_rows, rb_updated_row);
+      }
     }
   }
   return RUBY_Qnil;
@@ -1508,7 +1511,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       rb_iv_set(rb_event, "@rows_flags", USHORT2NUM(e->flags));
       VALUE rb_rows = rb_ary_new();
       VALUE rb_updated_rows = RUBY_Qnil;
-      if (klass == rb_cMysql2ReplicationUpdateRowsEvent) {
+      if (klass == rb_cMysql2ReplicationUpdateRowsEvent && event->event_type == UPDATE_ROWS_EVENT_V1) {
         rb_updated_rows = rb_ary_new();
       }
       if (!RB_NIL_P(rb_table_map)) {
