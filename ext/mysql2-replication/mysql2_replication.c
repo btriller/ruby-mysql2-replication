@@ -48,6 +48,7 @@ static VALUE rb_cMysql2ReplicationTableMapEvent;
 static VALUE rb_cMysql2ReplicationWriteRowsEvent;
 static VALUE rb_cMysql2ReplicationUpdateRowsEvent;
 static VALUE rb_cMysql2ReplicationDeleteRowsEvent;
+static VALUE rb_cMysql2ReplicationXidEvent;
 
 static VALUE
 rbm2_replication_rows_event_statement_end_p(VALUE self)
@@ -1276,6 +1277,15 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
                 rb_str_new(e->filename.str, filename_size));
     }
     break;
+  case XID_EVENT:
+    klass = rb_cMysql2ReplicationXidEvent;
+    rb_event = rb_class_new_instance(0, NULL, klass);
+    {
+      struct st_mariadb_rpl_xid_event *e =
+        &(event->event.xid);
+      rb_iv_set(rb_event, "@transaction_nr", ULONG2NUM(e->transaction_nr));
+    }
+    break;
   case FORMAT_DESCRIPTION_EVENT:
     klass = rb_cMysql2ReplicationFormatDescriptionEvent;
     rb_event = rb_class_new_instance(0, NULL, klass);
@@ -1665,6 +1675,12 @@ Init_mysql2_replication(void)
     rb_define_class_under(rb_mMysql2Replication,
                           "DeleteRowsEvent",
                           rb_cMysql2ReplicationRowsEvent);
+
+  rb_cMysql2ReplicationXidEvent =
+    rb_define_class_under(rb_mMysql2Replication,
+                          "XidEvent",
+                          rb_cMysql2ReplicationEvent);
+  rb_define_attr(rb_cMysql2ReplicationXidEvent, "transaction_nr", true, false);
 
   rb_cMysql2ReplicationQueryEvent =
     rb_define_class_under(rb_mMysql2Replication,
