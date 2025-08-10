@@ -10,6 +10,11 @@
 #include <mariadb_com.h>
 #include <mariadb_rpl.h>
 
+// ruby 2.2+
+#ifdef TypedData_Make_Struct
+#define NEW_TYPEDDATA_WRAPPER 1
+#endif
+
 /* mysql2 */
 #include <client.h>
 
