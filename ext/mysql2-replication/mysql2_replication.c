@@ -1459,6 +1459,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
                                                e->table.length));
       {
         VALUE rb_columns = rb_ary_new_capa(e->column_count);
+        uint8_t *column_names = (uint8_t *)(e->column_names.data);
         const uint8_t *column_types = (const uint8_t *)(e->column_types.str);
         const uint8_t *metadata = (const uint8_t *)(e->metadata.str);
         uint32_t i;
@@ -1469,6 +1470,15 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           rbm2_metadata_parse(&real_column_type,
                               &metadata,
                               rb_column);
+          if (column_names) {
+            const uint8_t column_name_len = *column_names;
+            column_names += 1;
+            const char *column_name = (const char *)column_names;
+            rb_hash_aset(rb_column,
+                rb_id2sym(rb_intern("name")),
+                rb_str_new(column_name, column_name_len));
+            column_names += column_name_len;
+          }
           rb_hash_aset(rb_column,
                        rb_id2sym(rb_intern("type")),
                        rbm2_column_type_to_symbol(real_column_type));
