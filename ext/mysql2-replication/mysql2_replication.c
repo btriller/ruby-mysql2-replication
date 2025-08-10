@@ -6,6 +6,7 @@
 
 /* libmariadb */
 #include <mysql.h>
+#include <errmsg.h>
 #include <mariadb_com.h>
 #include <mariadb_rpl.h>
 
@@ -1368,8 +1369,13 @@ rbm2_replication_client_fetch(VALUE self)
                                  wrapper,
                                  RUBY_UBF_IO,
                                  0);
-    if (mysql_errno(client) != 0) {
-      rbm2_replication_client_raise(self);
+    int myerr = mysql_errno(client);
+    if (myerr != 0) {
+      if (myerr == CR_BINLOG_ERROR) {
+        dprintf(2, "binlog error: %s\n", mysql_error(client));
+      } else {
+        rbm2_replication_client_raise(self);
+      }
     }
     if (!event) {
       if (wrapper->rpl->buffer_size == 0) {
@@ -1393,8 +1399,13 @@ rbm2_replication_client_each(VALUE self)
                                  wrapper,
                                  RUBY_UBF_IO,
                                  0);
-    if (mysql_errno(client) != 0) {
-      rbm2_replication_client_raise(self);
+    int myerr = mysql_errno(client);
+    if (myerr != 0) {
+      if (myerr == CR_BINLOG_ERROR) {
+        dprintf(2, "binlog error: %s\n", mysql_error(client));
+      } else {
+        rbm2_replication_client_raise(self);
+      }
     }
     if (!event) {
       if (wrapper->rpl->buffer_size == 0) {
