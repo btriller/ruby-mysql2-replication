@@ -43,6 +43,7 @@ static VALUE rb_eMysql2ReplicationError;
 static VALUE rb_cMysql2ReplicationEvent;
 static VALUE rb_cMysql2ReplicationRotateEvent;
 static VALUE rb_cMysql2ReplicationFormatDescriptionEvent;
+static VALUE rb_cMysql2ReplicationQueryEvent;
 static VALUE rb_cMysql2ReplicationTableMapEvent;
 static VALUE rb_cMysql2ReplicationWriteRowsEvent;
 static VALUE rb_cMysql2ReplicationUpdateRowsEvent;
@@ -1250,6 +1251,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
 {
   VALUE klass;
   VALUE rb_event;
+  int i;
   switch (event->event_type) {
   case ROTATE_EVENT:
     klass = rb_cMysql2ReplicationRotateEvent;
@@ -1284,6 +1286,147 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       rb_iv_set(rb_event, "@server_version", rb_str_new_cstr(e->server_version));
       rb_iv_set(rb_event, "@timestamp", UINT2NUM(e->timestamp));
       rb_iv_set(rb_event, "@header_length", UINT2NUM(e->header_len));
+    }
+    if (wrapper->force_disable_use_checksum) {
+      wrapper->rpl->use_checksum = false;
+    }
+    wrapper->format_description_processed = true;
+    break;
+  case QUERY_EVENT:
+    klass = rb_cMysql2ReplicationQueryEvent;
+    rb_event = rb_class_new_instance(0, NULL, klass);
+    {
+      struct st_mariadb_rpl_query_event *e =
+        &(event->event.query);
+      rb_iv_set(rb_event, "@database", rb_str_new(e->database.str, e->database.length));
+      rb_iv_set(rb_event, "@errornr", UINT2NUM(e->errornr));
+      rb_iv_set(rb_event, "@statement", rb_str_new(e->statement.str, e->statement.length));
+      VALUE rb_status = rb_hash_new();
+      const uint8_t *s = (uint8_t *)e->status.str;
+      const uint8_t *end = s + e->status.length;
+      while (s < end) {
+        VALUE rb_tmp;
+        int type = *s;
+        s+=1;
+        switch(type) {
+          case 0x0://Q_FLAGS2_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("flags2_code")),
+                UINT2NUM(rbm2_read_uint32(s)));
+            s+=4;
+            break;
+          case 0x1: //Q_SQL_MODE_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("sql_mode_code")),
+                UINT2NUM(rbm2_read_uint64(s)));
+            s+=8;
+            break;
+          case 0x2: //Q_CATALOG_NZ_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("catalog_name")),
+                rb_str_new((s + 1), *s));
+            s+=(*s) + 1;
+            break;
+          case 0x3: //Q_AUTO_INCREMENT
+            rb_tmp = rb_hash_new();
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("increment")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("offset")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("auto_increment")),
+                rb_tmp);
+            break;
+          case 0x4: //Q_CHARSET_CODE
+            rb_tmp = rb_hash_new();
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("client_character_set")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("collation_connection")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("collation_server")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("charset_code")),
+                rb_tmp);
+            break;
+          case 0x5: //Q_TIMEZONE_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("timezone_code")),
+                rb_str_new((s + 1), *s));
+            s+=(*s) + 1;
+            break;
+          case 0x6: //Q_CATALOG_NZ_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("catalog")),
+                rb_str_new((s + 1), *s));
+            s+=(*s) + 1;
+            break;
+          case 0x7: //Q_LC_TIME_NAMES_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("lc_time_name_code")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            break;
+          case 0x8: //Q_CHARSET_DATABASE_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("database_collation")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            break;
+          case 0xb: //Q_INVOKERS_CODE
+            rb_tmp = rb_hash_new();
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("username")),
+                rb_str_new((s + 1), *s));
+            s+=(*s) + 1;
+            rb_hash_aset(rb_tmp,
+                rb_id2sym(rb_intern("hostname")),
+                rb_str_new((s + 1), *s));
+            s+=(*s) + 1;
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("invoker")),
+                rb_tmp);
+            break;
+          case 0x10: //Q_EXPLICIT_DEFAULTS_FOR_TIMESTAMP_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("explicit_defaults_for_timestamp_code")),
+                UINT2NUM(rbm2_read_uint8(s)));
+            s+=1;
+            break;
+          case 0x11: //Q_DDL_LOGGED_WITH_XID_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("ddl_logged_with_xid_code")),
+                UINT2NUM(rbm2_read_uint64(s)));
+            s+=8;
+            break;
+          case 0x12: //Q_DEFAULT_COLLATION_FOR_UTF8_CODE
+            rb_hash_aset(rb_status,
+                rb_id2sym(rb_intern("default_collation_for_utf8_code")),
+                UINT2NUM(rbm2_read_uint16(s)));
+            s+=2;
+            break;
+          default:
+            s = e->status.str + e->status.length;
+        }
+      }
+      rb_iv_set(rb_event, "@status", rb_status);
+      VALUE rb_status_data = rb_ary_new_capa(e->status.length);
+      for (i = 0; i < e->status.length; i++) {
+        rb_ary_push(rb_status_data, UINT2NUM(e->status.str[i]));
+      }
+      rb_iv_set(rb_event, "@status_data", rb_status_data);
+      rb_iv_set(rb_event, "@seconds", UINT2NUM(e->seconds));
+      rb_iv_set(rb_event, "@thread_id", UINT2NUM(e->thread_id));
     }
     if (wrapper->force_disable_use_checksum) {
       wrapper->rpl->use_checksum = false;
@@ -1522,6 +1665,18 @@ Init_mysql2_replication(void)
     rb_define_class_under(rb_mMysql2Replication,
                           "DeleteRowsEvent",
                           rb_cMysql2ReplicationRowsEvent);
+
+  rb_cMysql2ReplicationQueryEvent =
+    rb_define_class_under(rb_mMysql2Replication,
+                          "QueryEvent",
+                          rb_cMysql2ReplicationEvent);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "database", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "errornr", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "statement", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "status", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "status_data", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "seconds", true, false);
+  rb_define_attr(rb_cMysql2ReplicationQueryEvent, "thread_id", true, false);
 
   rb_cMysql2ReplicationTableMapEvent =
     rb_define_class_under(rb_mMysql2Replication,
