@@ -1218,10 +1218,6 @@ rbm2_replication_rows_event_parse_rows_body(VALUE user_data)
   rbm2_replication_rows_event_parse_rows_data *data =
     (rbm2_replication_rows_event_parse_rows_data *)user_data;
 
-  const uint8_t *column_bitmap =
-    (const uint8_t *)(data->rows_event->column_bitmap);
-  const uint8_t *column_update_bitmap =
-    (const uint8_t *)(data->rows_event->column_update_bitmap);
   const uint8_t *row_data = data->rows_event->row_data;
   const uint8_t *row_data_end = row_data + data->rows_event->row_data_size;
   if (data->rows_event->type == UPDATE_ROWS) {
@@ -1231,7 +1227,7 @@ rbm2_replication_rows_event_parse_rows_body(VALUE user_data)
   while (row_data < row_data_end) {
     VALUE rb_row = rbm2_row_parse(&row_data,
                                   data->rows_event->column_count,
-                                  column_bitmap,
+                                  (const uint8_t *)(data->rows_event->column_bitmap),
                                   rb_columns);
     rb_ary_push(data->rb_rows, rb_row);
     if (data->rows_event->type == UPDATE_ROWS) {
@@ -1239,7 +1235,7 @@ rbm2_replication_rows_event_parse_rows_body(VALUE user_data)
         VALUE rb_updated_row;
         rb_updated_row = rbm2_row_parse(&row_data,
             data->rows_event->column_count,
-            column_update_bitmap,
+            (const uint8_t *)(data->rows_event->column_update_bitmap),
             rb_columns);
         rb_ary_push(data->rb_updated_rows, rb_updated_row);
       }
@@ -1268,8 +1264,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
   VALUE rb_event;
   switch (event->event_type) {
   case ROTATE_EVENT:
-    klass = rb_cMysql2ReplicationRotateEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationRotateEvent);
     {
       struct st_mariadb_rpl_rotate_event *e = &(event->event.rotate);
       rb_iv_set(rb_event, "@position", RB_ULL2NUM(e->position));
@@ -1280,8 +1275,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     }
     break;
   case XID_EVENT:
-    klass = rb_cMysql2ReplicationXidEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationXidEvent);
     {
       struct st_mariadb_rpl_xid_event *e =
         &(event->event.xid);
@@ -1289,8 +1283,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     }
     break;
   case FORMAT_DESCRIPTION_EVENT:
-    klass = rb_cMysql2ReplicationFormatDescriptionEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationFormatDescriptionEvent);
     {
       struct st_mariadb_rpl_format_description_event *e =
         &(event->event.format_description);
@@ -1305,8 +1298,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     wrapper->format_description_processed = true;
     break;
   case QUERY_EVENT:
-    klass = rb_cMysql2ReplicationQueryEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationQueryEvent);
     {
       struct st_mariadb_rpl_query_event *e =
         &(event->event.query);
@@ -1447,8 +1439,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     wrapper->format_description_processed = true;
     break;
   case TABLE_MAP_EVENT:
-    klass = rb_cMysql2ReplicationTableMapEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationTableMapEvent);
     {
       struct st_mariadb_rpl_table_map_event *e = &(event->event.table_map);
       VALUE rb_table_id = ULONG2NUM(e->table_id);
@@ -1550,8 +1541,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     }
     break;
   default:
-    klass = rb_cMysql2ReplicationEvent;
-    rb_event = rb_class_new_instance(0, NULL, klass);
+    rb_event = rb_class_new_instance(0, NULL, rb_cMysql2ReplicationEvent);
     break;
   }
   rb_iv_set(rb_event, "@type", RB_UINT2NUM(event->event_type));
