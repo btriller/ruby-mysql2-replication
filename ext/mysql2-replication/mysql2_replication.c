@@ -1224,6 +1224,9 @@ rbm2_replication_rows_event_parse_rows_body(VALUE user_data)
     (const uint8_t *)(data->rows_event->column_update_bitmap);
   const uint8_t *row_data = data->rows_event->row_data;
   const uint8_t *row_data_end = row_data + data->rows_event->row_data_size;
+  if (data->rows_event->type == UPDATE_ROWS) {
+    row_data += (data->rows_event->column_count + 7) / 8;
+  }
   VALUE rb_columns = rb_iv_get(data->rb_table_map, "@columns");
   while (row_data < row_data_end) {
     VALUE rb_row = rbm2_row_parse(&row_data,
