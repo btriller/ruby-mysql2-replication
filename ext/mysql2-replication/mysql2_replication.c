@@ -26,11 +26,17 @@
 /* mysql2 */
 #include <client.h>
 
-
 #ifndef RUBY_LL2NUM
 #  define RUBY_LL2NUM LL2NUM
 #endif
 
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+#define RB_MYSQL_UNUSED __attribute__ ((unused))
+#define RB_MYSQL_NORETURN __attribute__ ((noreturn))
+#else
+#define RB_MYSQL_UNUSED
+#define RB_MYSQL_NORETURN
+#endif
 
 void Init_mysql2_replication(void);
 
@@ -57,6 +63,7 @@ rbm2_replication_rows_event_statement_end_p(VALUE self)
     RUBY_Qtrue : RUBY_Qfalse;
 }
 
+static inline int8_t rbm2_read_int8(const uint8_t *data) RB_MYSQL_UNUSED;
 static inline int8_t
 rbm2_read_int8(const uint8_t *data)
 {
@@ -688,7 +695,7 @@ rbm2_column_parse(VALUE rb_column, const uint8_t **row_data)
       default :
         break;
       }
-      uint32_t symd = integer_part >> 17;
+      uint32_t symd = (uint32_t)(integer_part >> 17);
       uint32_t sym = symd >> 5;
       uint32_t sign = sym >> 17;
       uint32_t ym = sym % (1 << 17);
@@ -900,6 +907,8 @@ rbm2_replication_client_wrapper_get_client(
 {
   return rbm2_replication_client_wrapper_get_client_wrapper(wrapper)->client;
 }
+
+static void rbm2_replication_client_raise(VALUE self) RB_MYSQL_NORETURN;
 
 static void
 rbm2_replication_client_raise(VALUE self)
@@ -1136,8 +1145,7 @@ static void *
 rbm2_replication_client_open_without_gvl(void *data)
 {
   rbm2_replication_client_wrapper *wrapper = data;
-  int result = mariadb_rpl_open(wrapper->rpl);
-  return (void *)(intptr_t)result;
+  return (void *)(mariadb_rpl_open(wrapper->rpl) == 0 ? Qtrue : Qfalse);
 }
 
 static VALUE
@@ -1145,13 +1153,13 @@ rbm2_replication_client_open(VALUE self)
 {
   rbm2_replication_client_wrapper *wrapper =
     rbm2_replication_client_get_wrapper(self);
-  int result =
-    (intptr_t)rb_thread_call_without_gvl(
+  VALUE result =
+    (VALUE)rb_thread_call_without_gvl(
       rbm2_replication_client_open_without_gvl,
       wrapper,
       RUBY_UBF_IO,
       0);
-  if (result != 0) {
+  if (result == Qfalse) {
     rbm2_replication_client_raise(self);
   }
   if (rb_block_given_p()) {
@@ -1255,7 +1263,6 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
 {
   VALUE klass;
   VALUE rb_event;
-  int i;
   switch (event->event_type) {
   case ROTATE_EVENT:
     klass = rb_cMysql2ReplicationRotateEvent;
@@ -1326,7 +1333,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           case 0x2: //Q_CATALOG_NZ_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("catalog_name")),
-                rb_str_new((s + 1), *s));
+                rb_str_new((char *)(s + 1), *s));
             s+=(*s) + 1;
             break;
           case 0x3: //Q_AUTO_INCREMENT
@@ -1364,13 +1371,13 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           case 0x5: //Q_TIMEZONE_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("timezone_code")),
-                rb_str_new((s + 1), *s));
+                rb_str_new((char *)(s + 1), *s));
             s+=(*s) + 1;
             break;
           case 0x6: //Q_CATALOG_NZ_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("catalog")),
-                rb_str_new((s + 1), *s));
+                rb_str_new((char *)(s + 1), *s));
             s+=(*s) + 1;
             break;
           case 0x7: //Q_LC_TIME_NAMES_CODE
@@ -1389,11 +1396,11 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
             rb_tmp = rb_hash_new();
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("username")),
-                rb_str_new((s + 1), *s));
+                rb_str_new((char *)(s + 1), *s));
             s+=(*s) + 1;
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("hostname")),
-                rb_str_new((s + 1), *s));
+                rb_str_new((char *)(s + 1), *s));
             s+=(*s) + 1;
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("invoker")),
@@ -1418,11 +1425,12 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
             s+=2;
             break;
           default:
-            s = e->status.str + e->status.length;
+            s = ((uint8_t *)e->status.str) + e->status.length;
         }
       }
       rb_iv_set(rb_event, "@status", rb_status);
       VALUE rb_status_data = rb_ary_new_capa(e->status.length);
+      size_t i;
       for (i = 0; i < e->status.length; i++) {
         rb_ary_push(rb_status_data, RB_UINT2NUM(e->status.str[i]));
       }
@@ -1525,6 +1533,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       }
       rb_iv_set(rb_event, "@rows", rb_rows);
       VALUE rb_extra_data = rb_ary_new_capa(e->extra_data_size - 2);
+      size_t i;
       for (i = 0; i < e->extra_data_size - 2; i++) {
         rb_ary_push(rb_extra_data, RB_UINT2NUM(((uint8_t *)e->extra_data)[i]));
       }
