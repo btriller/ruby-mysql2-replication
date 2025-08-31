@@ -252,7 +252,7 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
   case MYSQL_TYPE_DOUBLE:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("size")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     (*metadata) += 1;
     break;
   case MYSQL_TYPE_NULL:
@@ -268,7 +268,7 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
   case MYSQL_TYPE_VARCHAR:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("max_length")),
-                 UINT2NUM(rbm2_read_uint16(*metadata)));
+                 RB_UINT2NUM(rbm2_read_uint16(*metadata)));
     (*metadata) += 2;
     break;
   case MYSQL_TYPE_BIT:
@@ -277,7 +277,7 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
       uint8_t bytes = (*metadata)[1];
       rb_hash_aset(rb_column,
                    rb_id2sym(rb_intern("bits")),
-                   UINT2NUM((bytes * 8) + bits));
+                   RB_UINT2NUM((bytes * 8) + bits));
       (*metadata) += 2;
     }
     break;
@@ -286,29 +286,29 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
   case MYSQL_TYPE_TIME2:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("decimals")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     (*metadata) += 1;
     break;
   case MYSQL_TYPE_JSON:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("length_size")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     (*metadata) += 1;
     break;
   case MYSQL_TYPE_NEWDECIMAL:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("precision")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("scale")),
-                 UINT2NUM((*metadata)[1]));
+                 RB_UINT2NUM((*metadata)[1]));
     (*metadata) += 2;
     break;
   case MYSQL_TYPE_ENUM:
   case MYSQL_TYPE_SET:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("size")),
-                 UINT2NUM((*metadata)[1]));
+                 RB_UINT2NUM((*metadata)[1]));
     (*metadata) += 2;
     break;
   case MYSQL_TYPE_TINY_BLOB:
@@ -318,7 +318,7 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
   case MYSQL_TYPE_BLOB:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("length_size")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     (*metadata) += 1;
     break;
   case MYSQL_TYPE_VAR_STRING:
@@ -331,12 +331,12 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
       case MYSQL_TYPE_SET:
         rb_hash_aset(rb_column,
                      rb_id2sym(rb_intern("size")),
-                     UINT2NUM((*metadata)[1]));
+                     RB_UINT2NUM((*metadata)[1]));
         break;
       default:
         rb_hash_aset(rb_column,
                      rb_id2sym(rb_intern("max_length")),
-                     UINT2NUM((((((*metadata)[0] >> 4) & 0x03) ^ 0x03) << 8) +
+                     RB_UINT2NUM((((((*metadata)[0] >> 4) & 0x03) ^ 0x03) << 8) +
                               (*metadata)[1]));
         break;
       }
@@ -346,7 +346,7 @@ rbm2_metadata_parse(enum enum_field_types *column_type,
   case MYSQL_TYPE_GEOMETRY:
     rb_hash_aset(rb_column,
                  rb_id2sym(rb_intern("length_size")),
-                 UINT2NUM((*metadata)[0]));
+                 RB_UINT2NUM((*metadata)[0]));
     (*metadata) += 1;
     break;
   default:
@@ -369,10 +369,10 @@ rbm2_column_parse_variable_size_uint(VALUE rb_column,
     rb_value = USHORT2NUM(rbm2_read_uint16(*row_data));
     break;
   case 3:
-    rb_value = UINT2NUM(rbm2_read_uint24(*row_data));
+    rb_value = RB_UINT2NUM(rbm2_read_uint24(*row_data));
     break;
   case 4:
-    rb_value = UINT2NUM(rbm2_read_uint32(*row_data));
+    rb_value = RB_UINT2NUM(rbm2_read_uint32(*row_data));
     break;
   default:
     rb_raise(rb_eNotImpError,
@@ -655,8 +655,8 @@ rbm2_column_parse(VALUE rb_column, const uint8_t **row_data)
       rb_value = rb_funcall(rb_cTime,
                             rb_intern("at"),
                             2,
-                            UINT2NUM(seconds),
-                            UINT2NUM(fractional_seconds));
+                            RB_UINT2NUM(seconds),
+                            RB_UINT2NUM(fractional_seconds));
     }
     break;
   case MYSQL_TYPE_DATETIME2:
@@ -705,13 +705,13 @@ rbm2_column_parse(VALUE rb_column, const uint8_t **row_data)
       rb_value = rb_funcall(rb_cTime,
                             rb_intern("utc"),
                             7,
-                            UINT2NUM(year),
-                            UINT2NUM(month),
-                            UINT2NUM(day),
-                            UINT2NUM(hour),
-                            UINT2NUM(minute),
-                            UINT2NUM(second),
-                            UINT2NUM(fractional_seconds));
+                            RB_UINT2NUM(year),
+                            RB_UINT2NUM(month),
+                            RB_UINT2NUM(day),
+                            RB_UINT2NUM(hour),
+                            RB_UINT2NUM(minute),
+                            RB_UINT2NUM(second),
+                            RB_UINT2NUM(fractional_seconds));
     }
     break;
   case MYSQL_TYPE_TIME2:
@@ -921,7 +921,7 @@ rbm2_replication_client_raise(VALUE self)
                               4,
                               rb_error_message,
                               LONG2NUM(client_wrapper->server_version),
-                              UINT2NUM(mysql_errno(client_wrapper->client)),
+                              RB_UINT2NUM(mysql_errno(client_wrapper->client)),
                               rb_sql_state);
   rb_exc_raise(rb_error);
 }
@@ -1059,7 +1059,7 @@ rbm2_replication_client_get_server_id(VALUE self)
   if (result != 0) {
     rbm2_replication_client_raise(self);
   }
-  return UINT2NUM(server_id);
+  return RB_UINT2NUM(server_id);
 }
 
 static VALUE
@@ -1088,7 +1088,7 @@ rbm2_replication_client_get_flags(VALUE self)
   if (result != 0) {
     rbm2_replication_client_raise(self);
   }
-  return UINT2NUM(flags);
+  return RB_UINT2NUM(flags);
 }
 
 static VALUE
@@ -1185,11 +1185,11 @@ rbm2_row_parse(const uint8_t **row_data,
       continue;
     }
     if (rbm2_bitmap_is_set(row_null_bitmap, i)) {
-      rb_hash_aset(rb_row, UINT2NUM(i), RUBY_Qnil);
+      rb_hash_aset(rb_row, RB_UINT2NUM(i), RUBY_Qnil);
     } else {
       VALUE rb_column = RARRAY_PTR(rb_columns)[i];
       VALUE rb_column_value = rbm2_column_parse(rb_column, row_data);
-      rb_hash_aset(rb_row, UINT2NUM(i), rb_column_value);
+      rb_hash_aset(rb_row, RB_UINT2NUM(i), rb_column_value);
     }
   }
   return rb_row;
@@ -1262,7 +1262,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     rb_event = rb_class_new_instance(0, NULL, klass);
     {
       struct st_mariadb_rpl_rotate_event *e = &(event->event.rotate);
-      rb_iv_set(rb_event, "@position", ULL2NUM(e->position));
+      rb_iv_set(rb_event, "@position", RB_ULL2NUM(e->position));
       size_t filename_size = e->filename.length;
       rb_iv_set(rb_event,
                 "@file_name",
@@ -1286,8 +1286,8 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
         &(event->event.format_description);
       rb_iv_set(rb_event, "@format", USHORT2NUM(e->format));
       rb_iv_set(rb_event, "@server_version", rb_str_new_cstr(e->server_version));
-      rb_iv_set(rb_event, "@timestamp", UINT2NUM(e->timestamp));
-      rb_iv_set(rb_event, "@header_length", UINT2NUM(e->header_len));
+      rb_iv_set(rb_event, "@timestamp", RB_UINT2NUM(e->timestamp));
+      rb_iv_set(rb_event, "@header_length", RB_UINT2NUM(e->header_len));
     }
     if (wrapper->force_disable_use_checksum) {
       wrapper->rpl->use_checksum = false;
@@ -1301,7 +1301,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       struct st_mariadb_rpl_query_event *e =
         &(event->event.query);
       rb_iv_set(rb_event, "@database", rb_str_new(e->database.str, e->database.length));
-      rb_iv_set(rb_event, "@errornr", UINT2NUM(e->errornr));
+      rb_iv_set(rb_event, "@errornr", RB_UINT2NUM(e->errornr));
       rb_iv_set(rb_event, "@statement", rb_str_new(e->statement.str, e->statement.length));
       VALUE rb_status = rb_hash_new();
       const uint8_t *s = (uint8_t *)e->status.str;
@@ -1314,13 +1314,13 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           case 0x0://Q_FLAGS2_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("flags2_code")),
-                UINT2NUM(rbm2_read_uint32(s)));
+                RB_UINT2NUM(rbm2_read_uint32(s)));
             s+=4;
             break;
           case 0x1: //Q_SQL_MODE_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("sql_mode_code")),
-                UINT2NUM(rbm2_read_uint64(s)));
+                RB_ULL2NUM(rbm2_read_uint64(s)));
             s+=8;
             break;
           case 0x2: //Q_CATALOG_NZ_CODE
@@ -1333,11 +1333,11 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
             rb_tmp = rb_hash_new();
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("increment")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("offset")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("auto_increment")),
@@ -1347,15 +1347,15 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
             rb_tmp = rb_hash_new();
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("client_character_set")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("collation_connection")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             rb_hash_aset(rb_tmp,
                 rb_id2sym(rb_intern("collation_server")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("charset_code")),
@@ -1376,13 +1376,13 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           case 0x7: //Q_LC_TIME_NAMES_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("lc_time_name_code")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             break;
           case 0x8: //Q_CHARSET_DATABASE_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("database_collation")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             break;
           case 0xb: //Q_INVOKERS_CODE
@@ -1402,19 +1402,19 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
           case 0x10: //Q_EXPLICIT_DEFAULTS_FOR_TIMESTAMP_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("explicit_defaults_for_timestamp_code")),
-                UINT2NUM(rbm2_read_uint8(s)));
+                RB_UINT2NUM(rbm2_read_uint8(s)));
             s+=1;
             break;
           case 0x11: //Q_DDL_LOGGED_WITH_XID_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("ddl_logged_with_xid_code")),
-                UINT2NUM(rbm2_read_uint64(s)));
+                RB_ULL2NUM(rbm2_read_uint64(s)));
             s+=8;
             break;
           case 0x12: //Q_DEFAULT_COLLATION_FOR_UTF8_CODE
             rb_hash_aset(rb_status,
                 rb_id2sym(rb_intern("default_collation_for_utf8_code")),
-                UINT2NUM(rbm2_read_uint16(s)));
+                RB_UINT2NUM(rbm2_read_uint16(s)));
             s+=2;
             break;
           default:
@@ -1424,11 +1424,11 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       rb_iv_set(rb_event, "@status", rb_status);
       VALUE rb_status_data = rb_ary_new_capa(e->status.length);
       for (i = 0; i < e->status.length; i++) {
-        rb_ary_push(rb_status_data, UINT2NUM(e->status.str[i]));
+        rb_ary_push(rb_status_data, RB_UINT2NUM(e->status.str[i]));
       }
       rb_iv_set(rb_event, "@status_data", rb_status_data);
-      rb_iv_set(rb_event, "@seconds", UINT2NUM(e->seconds));
-      rb_iv_set(rb_event, "@thread_id", UINT2NUM(e->thread_id));
+      rb_iv_set(rb_event, "@seconds", RB_UINT2NUM(e->seconds));
+      rb_iv_set(rb_event, "@thread_id", RB_UINT2NUM(e->thread_id));
     }
     if (wrapper->force_disable_use_checksum) {
       wrapper->rpl->use_checksum = false;
@@ -1473,7 +1473,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
                        rbm2_column_type_to_symbol(real_column_type));
           rb_hash_aset(rb_column,
                        rb_id2sym(rb_intern("type_id")),
-                       UINT2NUM(real_column_type));
+                       RB_UINT2NUM(real_column_type));
           rb_ary_push(rb_columns, rb_column);
         }
         rb_iv_set(rb_event, "@columns", rb_columns);
@@ -1526,7 +1526,7 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
       rb_iv_set(rb_event, "@rows", rb_rows);
       VALUE rb_extra_data = rb_ary_new_capa(e->extra_data_size - 2);
       for (i = 0; i < e->extra_data_size - 2; i++) {
-        rb_ary_push(rb_extra_data, UINT2NUM(((uint8_t *)e->extra_data)[i]));
+        rb_ary_push(rb_extra_data, RB_UINT2NUM(((uint8_t *)e->extra_data)[i]));
       }
       rb_iv_set(rb_event, "@extra_data", rb_extra_data);
       if (klass == rb_cMysql2ReplicationUpdateRowsEvent) {
@@ -1542,11 +1542,11 @@ rbm2_replication_event_new(rbm2_replication_client_wrapper *wrapper,
     rb_event = rb_class_new_instance(0, NULL, klass);
     break;
   }
-  rb_iv_set(rb_event, "@type", UINT2NUM(event->event_type));
-  rb_iv_set(rb_event, "@timestamp", UINT2NUM(event->timestamp));
-  rb_iv_set(rb_event, "@server_id", UINT2NUM(event->server_id));
-  rb_iv_set(rb_event, "@length", UINT2NUM(event->event_length));
-  rb_iv_set(rb_event, "@next_position", UINT2NUM(event->next_event_pos));
+  rb_iv_set(rb_event, "@type", RB_UINT2NUM(event->event_type));
+  rb_iv_set(rb_event, "@timestamp", RB_UINT2NUM(event->timestamp));
+  rb_iv_set(rb_event, "@server_id", RB_UINT2NUM(event->server_id));
+  rb_iv_set(rb_event, "@length", RB_UINT2NUM(event->event_length));
+  rb_iv_set(rb_event, "@next_position", RB_UINT2NUM(event->next_event_pos));
   rb_iv_set(rb_event, "@flags", USHORT2NUM(event->flags));
   return rb_event;
 }
@@ -1758,11 +1758,11 @@ Init_mysql2_replication(void)
     rb_define_module_under(rb_mMysql2Replication, "Flags");
   rb_define_const(rb_cMysql2ReplicationFlags,
                   "BINLOG_DUMP_NON_BLOCK",
-                  UINT2NUM(MARIADB_RPL_BINLOG_DUMP_NON_BLOCK));
+                  RB_UINT2NUM(MARIADB_RPL_BINLOG_DUMP_NON_BLOCK));
   rb_define_const(rb_cMysql2ReplicationFlags,
                   "BINLOG_SEND_ANNOTATE_ROWS",
-                  UINT2NUM(MARIADB_RPL_BINLOG_SEND_ANNOTATE_ROWS));
+                  RB_UINT2NUM(MARIADB_RPL_BINLOG_SEND_ANNOTATE_ROWS));
   rb_define_const(rb_cMysql2ReplicationFlags,
                   "IGNORE_HEARTBEAT",
-                  UINT2NUM(MARIADB_RPL_IGNORE_HEARTBEAT));
+                  RB_UINT2NUM(MARIADB_RPL_IGNORE_HEARTBEAT));
 }

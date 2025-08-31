@@ -34,6 +34,7 @@ Gem::Specification.new do |spec|
     spec.executables = Dir.glob("*")
   end
 
+  spec.required_ruby_version = '>= 2.3.0'
   spec.add_runtime_dependency("mysql2")
   spec.add_runtime_dependency("native-package-installer")
   spec.add_runtime_dependency("pkg-config")
